@@ -768,7 +768,7 @@ end type %(typename)s_rec_ptr_type""" % {'typename': tname})
         elif isinstance(t, ft.Module):
             this = ''
         else:
-            raise ValueError("Don't know how to write scalar wrappers for %s type %s"(t, type(t)))
+            raise ValueError("Don't know how to write scalar wrappers for %s type %s"%(t, type(t)))
 
         # Get appropriate use statements
         extra_uses = {}
