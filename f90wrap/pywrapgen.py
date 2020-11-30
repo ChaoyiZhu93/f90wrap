@@ -151,9 +151,11 @@ def format_doc_string(node):
 class PythonWrapperGenerator(ft.FortranVisitor, cg.CodeGenerator):
     def __init__(self, prefix, mod_name, types, f90_mod_name=None,
                  make_package=False, kind_map=None, init_file=None,
-                 py_mod_names=None, class_names=None):
+                 py_mod_names=None, class_names=None, max_length=None):
+        if max_length is None:
+            max_length = 80
         cg.CodeGenerator.__init__(self, indent=' ' * 4,
-                                  max_length=80,
+                                  max_length=max_length,
                                   continuation='\\',
                                   comment='#')
         ft.FortranVisitor.__init__(self)
@@ -288,7 +290,7 @@ except ValueError:
             self.dedent()  # finish the FortranModule class
             self.write()
             # instantise the module class
-            self.write('%s = %s()' % (node.name, node.name.title()))
+            self.write('%s = %s()' % (node.name, cls_name))
             self.write()
 
         self.current_module = None
@@ -357,7 +359,7 @@ except ValueError:
         self.write('f90wrap.runtime.FortranDerivedType.__init__(bare_class)')
 
         self.write(call_line)
-        
+
         self.write('bare_class._handle = result[0] if isinstance(result, tuple) else result')
         self.write('return bare_class')
 
@@ -433,7 +435,7 @@ except ValueError:
                         #         self.imports.add((self.py_mod_name + '.' + cls_mod_name, cls_name))
                         # else:
                         #     cls_name = cls_mod_name + '.' + cls_name
-                        self.write('%s = %s.from_handle(%s)' %
+                        self.write('%s = %s.from_handle(%s, alloc=True)' %
                                    (ret_val.name, cls_name, ret_val.name))
                 self.write('return %(result)s' % dct)
 
@@ -452,8 +454,8 @@ except ValueError:
         proc_names = []
         for proc in node.procedures:
             proc_name = ''
-            if not self.make_package:
-                proc_name += proc.mod_name.title() + '.'
+            if not self.make_package and hasattr(proc, 'mod_name'):
+                proc_name += normalise_class_name(proc.mod_name, self.class_names) + '.'
             elif cls_name is not None:
                 proc_name += cls_name + '.'
             if hasattr(proc, 'method_name'):
@@ -723,7 +725,7 @@ return %(el_name)s""" % dct)
                    parent='self',
                    doc=format_doc_string(el),
                    cls_name=cls_name,
-                   cls_mod_name=cls_mod_name + '.')
+                   cls_mod_name=cls_mod_name.title() + '.')
 
         if isinstance(node, ft.Module):
             dct['parent'] = 'f90wrap.runtime.empty_type'
